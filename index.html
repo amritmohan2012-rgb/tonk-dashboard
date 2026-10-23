@@ -568,7 +568,8 @@ function journey(){
  const chips=`<div class="dpl"><div class="chip">Login <b>${a.in||'-'}</b></div><div class="chip">Sign-out <b>${a.out||'not recorded'}</b></div><div class="chip">Hours <b>${a.hrs==null?'-':a.hrs.toFixed(1)}</b></div><div class="chip">Villages <b>${g.length}</b></div><div class="chip">RWE visits <b>${a.v.length}</b></div></div>`;
  let tl=`<ul class="tl"><li class="s"><b>${a.in||'-'}</b> Start of day${a.sloc?': '+esc(a.sloc):''}</li>`;
  g.forEach((s,i)=>{const spent=(mins(s.last)-mins(s.first));const seen=new Set();const rl=s.r.filter(v=>v.rid&&!seen.has(v.rid)&&seen.add(v.rid)).map(v=>`<span class="r">${esc(v.nm||pname(+v.rid))} ${catBadge(+v.rid)}</span>`).join('');tl+=`<li><b>${s.first}</b> ${esc(s.vn||'Village')} (${s.n} ${s.n>1?'visits':'visit'}${s.n>1&&spent>0?', first to last log '+spent+' min':''})${rl?`<div class="rl">${rl}</div>`:''}</li>`});
- tl+=`<li class="e"><b>${a.out||'-'}</b> ${a.out?'Sign-out':'No sign-out recorded'}</li></ul>`;
+ let oloc='';if(a.out&&a.olat){let bv=null,bd=1e9;D.villages.forEach(v=>{if(v.lat==null)return;const x=hav(a.olat,a.olng,v.lat,v.lng);if(x<bd){bd=x;bv=v}});const fs=a.slat?hav(a.slat,a.slng,a.olat,a.olng):null;oloc=': '+(bv&&bd<=5?'near '+esc(bv.vn)+(bv.blk?', '+esc(bv.blk):'')+' ('+(bd<0.1?'under 100 m':bd.toFixed(1)+' km')+' away)':'outside mapped villages')+(fs!=null?', '+(fs<0.1?'same place as start of day':fs.toFixed(1)+' km from start of day'):'')+' <a href="https://www.google.com/maps?q='+a.olat+','+a.olng+'" target="_blank" rel="noopener">View on map</a>'}
+ tl+=`<li class="e"><b>${a.out||'-'}</b> ${a.out?'Sign-out'+oloc:'No sign-out recorded'}</li></ul>`;
  out.innerHTML=chips+`<div class="grid2"><div id="j-map"></div><div>${tl}</div></div>`;
  const pts=[],ln=[];
  if(a.slat)pts.push({lat:a.slat,lng:a.slng,r:8,c:'#5a9e6f',txt:'S',info:`<b>Start</b> ${a.in||''}<br>${esc(a.sloc||'')}`});
