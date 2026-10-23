@@ -5,6 +5,7 @@
 <title>Tonk Leadership Dashboard | Frontier Markets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>:root{--amber:#f7b133;--peach:#fce5cd;--cream:#fefaf7;--tx:#434343;--tx2:#666666;--tx3:#8c8c8c;--line:#eadfd2;--bg:#ffffff;--red:#d9604c;--blue:#4a90b8;--green:#5a9e6f;
  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;font-style:normal!important}
@@ -74,6 +75,7 @@ tr.tot td{font-weight:700;background:var(--cream);border-top:2px solid var(--pea
 .tl li b{color:var(--tx)}
 .tl li:before{content:'';position:absolute;left:-7px;top:12px;width:11px;height:11px;border-radius:50%;background:var(--amber);border:2px solid #fff}
 .tl li.s:before{background:var(--green)}.tl li.e:before{background:var(--tx)}
+.dl{border:1px solid var(--amber);background:var(--amber);border-radius:8px;padding:8px 14px;font:500 13px 'Roboto',Arial;cursor:pointer;color:#434343;align-self:flex-end}.dl:hover{background:#f3a51a}
 .more{margin-top:10px;border:1px solid #d9cfc3;background:#fff;border-radius:8px;padding:8px 14px;font:500 13px 'Roboto',Arial;cursor:pointer;color:var(--tx)}
 .warn{background:var(--cream);border-left:4px solid var(--amber);padding:10px 12px;border-radius:6px;font-size:13px;color:var(--tx2);margin-bottom:14px}
 .warn b{color:var(--tx)}
@@ -156,6 +158,8 @@ const matCol=id=>MATC[MATS.findIndex(m=>m.id===id)%MATC.length];
 const mname=id=>(MATBY[id]||{}).name||('MAT '+id);
 const VIL=Object.fromEntries(D.villages.map(v=>[v.vc,v]));
 const PPL=D.ppl; const pname=id=>(PPL[id]||[])[0]||('ID '+id);
+const dlx=(file,sheet,head,rows)=>{try{if(window.XLSX){const ws=XLSX.utils.aoa_to_sheet([head,...rows]);ws['!cols']=head.map((x,i)=>({wch:Math.min(40,Math.max(String(x).length+2,...rows.slice(0,200).map(r=>String(r[i]==null?'':r[i]).length+2)))}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,sheet.slice(0,31));XLSX.writeFile(wb,file+'.xlsx');return}}catch(e){}
+ const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';const b=new Blob(['\ufeff'+[head,...rows].map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=file+'.csv';document.body.appendChild(a);a.click();a.remove()};
 const dmy=d=>{if(!d)return '-';const [y,m,dd]=d.split('-');return dd+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]};
 const dow=d=>new Date(d+'T00:00:00Z').getUTCDay();
 const DOWN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -367,11 +371,12 @@ function rw(body,L,A,mapB){
  let h=kpis([['RWEs who ordered',num(all.length),'in this view'],['With a delivered order',num(all.filter(x=>ds(x)>0).length),pct(all.filter(x=>ds(x)>0).length,all.length)+' of ordering RWEs'],['Repeat RWEs',num(all.filter(x=>ds(x)>=2).length),'2 or more delivered orders'],['Mapped RWEs who have not ordered',num(Math.max(0,mapB.length-all.length)),'in this block selection']]);
  h+=card('RWEs by delivered orders','Number of RWEs by how many delivered orders they have placed',hbars(bk.map(b=>({l:b[0],v:all.filter(b[1]).length,c:'#f7b133'}))));
  const q=st.q.toLowerCase();
- const list=all.sort((a,b)=>b.D-a.D||b.t-a.t).filter(x=>!q||(pname(x.id)+' '+((VIL[(PPL[x.id]||[])[3]]||{}).vn||'')).toLowerCase().includes(q));
- h+=card('RWE list',`${num(list.length)} RWEs, highest delivered value first`,`<div class="dpl"><input type="search" id="b-q" placeholder="Search RWE or village" value="${esc(st.q)}" style="min-width:240px"></div>`+tbl([{h:'RWE',k:r=>esc(pname(r.id))},{h:'Village',k:r=>esc((VIL[(PPL[r.id]||[])[3]]||{}).vn||'-')},{h:'Block',k:r=>esc((PPL[r.id]||[])[2]||'-')},{h:'RWE category',k:r=>catBadge(r.id)},{h:'Orders',k:r=>r.o.size},{h:'Delivered orders',k:r=>r.d.size},{h:'Ordered',k:r=>inr(r.t)},{h:'Delivered',k:r=>inr(r.D)},{h:'To be delivered',k:r=>inr(r.P)},{h:'Rejected',k:r=>inr(r.R)},{h:'Last order',k:r=>dmy(r.last)},{h:'Oct target',k:r=>TG[r.id]?inr(TG[r.id]):'-'}],list.slice(0,st.lim))+(list.length>st.lim?`<button class="more" id="b-more">Show more</button>`:''));
+ const list=all.sort((a,b)=>b.D-a.D||b.t-a.t).filter(x=>!q||(pname(x.id)+' '+x.id+' '+((VIL[(PPL[x.id]||[])[3]]||{}).vn||'')).toLowerCase().includes(q));
+ h+=card('RWE list',`${num(list.length)} RWEs, highest delivered value first`,`<div class="dpl"><input type="search" id="b-q" placeholder="Search RWE, ID or village" value="${esc(st.q)}" style="min-width:240px"><button class="dl" id="b-dl">Download Excel</button></div>`+tbl([{h:'RWE ID',k:r=>r.id},{h:'RWE',k:r=>esc(pname(r.id))},{h:'Village',k:r=>esc((VIL[(PPL[r.id]||[])[3]]||{}).vn||'-')},{h:'Block',k:r=>esc((PPL[r.id]||[])[2]||'-')},{h:'RWE category',k:r=>catBadge(r.id)},{h:'Orders',k:r=>r.o.size},{h:'Delivered orders',k:r=>r.d.size},{h:'Ordered',k:r=>inr(r.t)},{h:'Delivered',k:r=>inr(r.D)},{h:'To be delivered',k:r=>inr(r.P)},{h:'Rejected',k:r=>inr(r.R)},{h:'Last order',k:r=>dmy(r.last)},{h:'Oct target',k:r=>TG[r.id]?inr(TG[r.id]):'-'}],list.slice(0,st.lim))+(list.length>st.lim?`<button class="more" id="b-more">Show more</button>`:''));
  body.innerHTML=h;
  const qi=$('#b-q');qi.oninput=e=>{st.q=e.target.value;st.lim=40;const pos=e.target.selectionStart;render();const n=$('#b-q');n.focus();n.setSelectionRange(pos,pos)};
  const mo=$('#b-more');if(mo)mo.onclick=()=>{st.lim+=60;render()};
+ const bd=$('#b-dl');if(bd)bd.onclick=()=>dlx('Tonk_RWE_list','RWE list',['RWE ID','RWE','Village','Block','RWE category','Orders','Delivered orders','Ordered (Rs)','Delivered (Rs)','To be delivered (Rs)','Rejected (Rs)','Last order','Oct target (Rs)'],list.map(r=>[r.id,pname(r.id),(VIL[(PPL[r.id]||[])[3]]||{}).vn||'',(PPL[r.id]||[])[2]||'',catOf(r.id)==='NC'?'None':catOf(r.id),r.o.size,r.d.size,Math.round(r.t),Math.round(r.D),Math.round(r.P),Math.round(r.R),r.last,TG[r.id]||'']));
 }
 // ----- Products -----
 function pr(body,dl){
@@ -419,7 +424,7 @@ window.renderBiz=render;render();
 const root=$('#t-trn');const TR=D.train; // [date,mid,0,role(0 RWE,1 SS),pid,projBlk,projVc,projVn,time]
 const trainers=MATS.filter(m=>m.type==='Training');
 const months=uniq(TR.map(t=>t[0].slice(0,7))).sort();
-const st={blk:'All',mat:'All',mon:'All',from:'',to:'',cat:'All',q:'',lim:40,ex:null,exlim:30,exf:'all'};
+const st={blk:'All',mat:'All',mon:'All',from:'',to:'',cat:'All',q:'',lim:40,ex:null,exlim:30,exf:'all',nq:'',nlim:40};
 const TMIN=TR.reduce((a,t)=>t[0]<a?t[0]:a,'9999');
 const tblk=t=>(PPL[t[4]]||[])[2]||t[5]||'Unknown';
 const RO=['RWE','Super Saheli'];
@@ -464,8 +469,19 @@ function render(){
  h+=card('Where training happened','Dots sized by sessions, coloured by block. Tap a dot for details.',blockLegend()+'<div id="t-map"></div>');
  const q=st.q.toLowerCase();
  const log=rows.slice().sort((a,b)=>(b[0]+b[8]).localeCompare(a[0]+a[8])).filter(t=>!q||(pname(t[4])+' '+t[4]+' '+mname(t[1])+' '+(t[7]||'')).toLowerCase().includes(q));
- h+=card('Training log',`${num(log.length)} sessions, newest first`,`<div class="dpl"><input type="search" id="t-q" placeholder="Search name, ID, MAT or village" value="${esc(st.q)}" style="min-width:240px"></div>`+tbl([{h:'Date',k:r=>dmy(r[0])+' '+r[8]},{h:'MAT',k:r=>esc(mname(r[1]))},{h:'Role',k:r=>roleLbl(r)},{h:'RWE ID',k:r=>r[4]},{h:'Trained person',k:r=>esc(pname(r[4]))},{h:'RWE category',k:r=>catBadge(r[4])},{h:'Village',k:r=>esc(r[7]||'-')},{h:'Block',k:r=>esc(tblk(r))}],log.slice(0,st.lim))+(log.length>st.lim?`<button class="more" id="t-more">Show more</button>`:''));
+ h+=card('Training log',`${num(log.length)} sessions, newest first`,`<div class="dpl"><input type="search" id="t-q" placeholder="Search name, ID, MAT or village" value="${esc(st.q)}" style="min-width:240px"><button class="dl" id="t-dl">Download Excel</button></div>`+tbl([{h:'Date',k:r=>dmy(r[0])+' '+r[8]},{h:'MAT',k:r=>esc(mname(r[1]))},{h:'Role',k:r=>roleLbl(r)},{h:'RWE ID',k:r=>r[4]},{h:'Trained person',k:r=>esc(pname(r[4]))},{h:'RWE category',k:r=>catBadge(r[4])},{h:'Village',k:r=>esc(r[7]||'-')},{h:'Block',k:r=>esc(tblk(r))}],log.slice(0,st.lim))+(log.length>st.lim?`<button class="more" id="t-more">Show more</button>`:''));
+ // visited but WIDB training not done: RWEs listed in village visits (working reports) with no WIDB RWE session
+ const trained=new Set(TR.filter(t=>t[3]===0).map(t=>t[4]));const vo={};
+ D.att.forEach(a=>{if(st.mat!=='All'&&String(a.id)!==st.mat)return;if(st.mon!=='All'&&a.d.slice(0,7)!==st.mon)return;if(st.from&&a.d<st.from)return;if(st.to&&a.d>st.to)return;a.v.forEach(v=>{if(!v.rid)return;const id=+v.rid;const p=PPL[id];if(!p||p[1]!=='RWE'||trained.has(id))return;if(st.blk!=='All'&&p[2]!==st.blk)return;if(st.cat!=='All'&&catOf(id)!==st.cat)return;const o=vo[id]||(vo[id]={id,n:0,first:a.d,last:a.d,by:new Set()});o.n++;if(a.d<o.first)o.first=a.d;if(a.d>o.last)o.last=a.d;o.by.add(mname(a.id))})});
+ const nq=st.nq.toLowerCase();
+ const nt=Object.values(vo).filter(r=>!nq||(pname(r.id)+' '+r.id+' '+((VIL[(PPL[r.id]||[])[3]]||{}).vn||'')+' '+[...r.by].join(' ')).toLowerCase().includes(nq)).sort((a,b)=>b.last.localeCompare(a.last)||b.n-a.n);
+ const ntRow=r=>{const p=PPL[r.id]||[];return[r.id,pname(r.id),(VIL[p[3]]||{}).vn||'',p[2]||'',catOf(r.id)==='NC'?'None':catOf(r.id),[...r.by].join(', '),r.n,r.first,r.last,p[4]?mname(p[4]):'']};
+ h+=card('Visited but WIDB training not done',`${num(nt.length)} RWEs listed in village visits (MAT working reports) with no saved WIDB session. Uses the MAT, block, category and date filters above (date = visit date). An RWE is dropped once any WIDB form is saved for them.`,`<div class="dpl"><input type="search" id="n-q" placeholder="Search name, ID, village or MAT" value="${esc(st.nq)}" style="min-width:240px"><button class="dl" id="n-dl">Download Excel</button></div>`+tbl([{h:'RWE ID',k:r=>r.id},{h:'RWE',k:r=>esc(pname(r.id)),l:1},{h:'Village',k:r=>esc((VIL[(PPL[r.id]||[])[3]]||{}).vn||'-'),l:1},{h:'Block',k:r=>esc((PPL[r.id]||[])[2]||'-'),l:1},{h:'RWE category',k:r=>catBadge(r.id)},{h:'Visited by',k:r=>esc([...r.by].join(', ')),l:1},{h:'Visits',k:r=>r.n},{h:'First visit',k:r=>dmy(r.first)},{h:'Last visit',k:r=>dmy(r.last)},{h:'Training MAT',k:r=>esc((PPL[r.id]||[])[4]?mname(PPL[r.id][4]):'-'),l:1}],nt.slice(0,st.nlim))+(nt.length>st.nlim?`<button class="more" id="n-more">Show more</button>`:''));
  root.innerHTML=h;
+ const tdl=$('#t-dl');if(tdl)tdl.onclick=()=>dlx('Tonk_WIDB_training_log','Training log',['Date','Time','MAT','Role','RWE ID','Trained person','RWE category','Village','Block'],log.map(r=>[r[0],r[8],mname(r[1]),roleLbl(r),r[4],pname(r[4]),catOf(r[4])==='NC'?'None':catOf(r[4]),r[7]||'',tblk(r)]));
+ const ndl=$('#n-dl');if(ndl)ndl.onclick=()=>dlx('Tonk_visited_not_trained','Visited, not trained',['RWE ID','RWE','Village','Block','RWE category','Visited by','Visits','First visit','Last visit','Training MAT'],nt.map(ntRow));
+ const nqi=$('#n-q');nqi.oninput=e=>{st.nq=e.target.value;st.nlim=40;const pos=e.target.selectionStart;render();const n=$('#n-q');n.focus();n.setSelectionRange(pos,pos)};
+ const nmo=$('#n-more');if(nmo)nmo.onclick=()=>{st.nlim+=60;render()};
  const vm={};rows.forEach(t=>{const k=t[6];if(!k)return;(vm[k]||(vm[k]={n:0,c:{}}));vm[k].n++;const c=catOf(t[4]);vm[k].c[c]=(vm[k].c[c]||0)+1});
  const pts=Object.entries(vm).map(([vc,o])=>{const v=VIL[vc];if(!v)return null;return{lat:v.lat,lng:v.lng,r:4+Math.sqrt(o.n)*2.2,c:BCOL[v.blk]||'#999',info:`<b>${esc(v.vn)}</b> (${esc(v.blk)})<br>${o.n} WIDB sessions<br>By category: ${catMix(o.c)}`}}).filter(Boolean);
  drawMap($('#t-map'),pts,[]);
